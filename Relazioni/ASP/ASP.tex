@@ -1,0 +1,231 @@
+\documentclass[12pt]{report}
+\usepackage[a4paper]{geometry}
+\usepackage[myheadings]{fullpage}
+\usepackage{fancyhdr}
+\usepackage{lastpage}
+\usepackage{graphicx, wrapfig, subcaption, setspace, booktabs}
+\usepackage[T1]{fontenc}
+\usepackage[font=small, labelfont=bf]{caption}
+\usepackage{fourier}
+\usepackage[protrusion=true, expansion=true]{microtype}
+\usepackage{sectsty}
+\usepackage{url, lipsum}
+\usepackage{listings}
+\usepackage[utf8]{inputenc}
+\usepackage[italian]{babel}
+
+\lstset{
+  basicstyle=\ttfamily,
+  columns=fullflexible,
+  frame=single,
+  breaklines=true,
+}
+
+\newcommand{\HRule}[1]{\rule{\linewidth}{#1}}
+\onehalfspacing
+\setcounter{tocdepth}{5}
+\setcounter{secnumdepth}{5}
+
+%-------------------------------------------------------------------------------
+% HEADER & FOOTER
+%-------------------------------------------------------------------------------
+\pagestyle{fancy}
+\fancyhead{}
+\setlength\headheight{15pt}
+\fancyhead[L]{Intelligenza Artificiale e Laboratorio}
+\fancyhead[R]{Universit\`a degli Studi di Torino}
+%\fancyfoot[R]{Page \thepage\ of \pageref{LastPage}}
+%-------------------------------------------------------------------------------
+% TITLE PAGE
+%-------------------------------------------------------------------------------
+
+\begin{document}
+
+\title{ \normalsize \textsc{}
+        \\ [2.0cm]
+        \HRule{0.5pt} \\
+        \LARGE \textbf{\uppercase{Intelligenza Artificiale e Laboratorio: \\ Answer Set Programming \\e\\ Clingo}}
+        \HRule{2pt} \\ [0.5cm]
+        \normalsize \today \vspace*{5\baselineskip}}
+
+\date{}
+
+\author{
+        Andrea Forgione: 809240 \\ 
+        Arthur Capozzi:  802586 \\
+        Leonardo Zanchi: 800935}
+
+\maketitle
+\tableofcontents
+\newpage
+
+%-------------------------------------------------------------------------------
+% Section title formatting
+\sectionfont{\scshape}
+%-------------------------------------------------------------------------------
+
+%-------------------------------------------------------------------------------
+% BODY
+%-------------------------------------------------------------------------------
+
+\chapter*{Introduzione}
+
+In questa relazione saranno presentati gli esercizi riguardandi la parte di \emph{Answer Set Programming} e Clingo.
+I domini scelti sono due: le cinque case e il trasporto aereo di merci.
+Il lavoro sarà diviso quindi in due capitoli, uno per ciascun problema considerato.
+La versione di Clingo utilizzata è \emph{Clingo 5.2.1 WIN64}.
+
+\chapter{Cinque case}
+Il dominio delle cinque case ha come obiettivo quello di trovare chi tra le persone descritte ha come animale preferito la zebra.
+La soluzione si trova all'interno del file \emph{house\_problem.lp}.
+La struttura del programma segue il design \emph{Generate-Define-Test}, e quindi l'implementazione si articola in tre sezioni differenti, ognuna con le sue caratteristiche: 
+\begin{itemize}
+\item \emph{Generate};
+\item \emph{Define};
+\item \emph{Test};
+\end{itemize}
+
+\section{Generate}
+Questa sezione definisce una collezione di \emph{answer sets} che possono essere delle potenziali soluzioni al problema. Aggregati e \emph{choice rules} sono tipicamente contenute in questa sezione.
+Con le regole riportate nel listato, si definisce che le caratteristiche come colore, nazionalità, animale, bevanda e professione siano uniche, cioè, per esempio, può esistere al più una casa con un stesso colore. 
+Queste condizioni sono espresse attraverso delle \emph{cardinality constraint}, che, sempre in riferimento al colore, stabiliscono di assegnare mediante la funzione \emph{colore} ad ogni fatto \emph{case} uno (ed un solo) fatto \emph{colori}. Con la seconda regola, invece, si afferma il contario, cioè che ad ogni fatto \emph{colori} corrisponda un solo fatto \emph{case}.
+Come già detto, il medesimo ragionamento vale anche per le altre caratteristiche.
+
+\begin{lstlisting}[language=lisp]
+% Colore
+1 { colore(Casa, Colore) : colori(Colore) } 1 :- case(Casa).
+1 { colore(Casa, Colore) : case(Casa) } 1 :- colori(Colore).
+\end{lstlisting}
+
+\section{Define}
+Questa parte esprime concetti aggiuntivi e connette la parte \emph{generate} a quella \emph{test}.
+Sono riportati tutti i fatti che l'enunciato descrive:
+
+\begin{itemize}
+\item le nazionalità dei personaggi (definita \emph{nazionalitas} per conflitto e mancanza di fantasia sul nome);
+\item le case, definite con un intervallo, assegnando a ciascuna un numero;
+\item gli animali, le bevande ed il colore;
+\end{itemize}
+
+È stata inserita anche una regola per definire l'adiacenza di una casa all'altra. Per esempio \emph{casa(1)} e \emph{casa(2)} sono adiacenti perché $|1 - 2 | == 1$, mentre \emph{casa(5)} e {casa(3)} perché $|5 - 3| != 1$.
+Per convenzione si è stabilito che la casa all'estrema sinistra sia identificata dal numero $1$, mentre quella all'estrema destra da $5$. Inoltre, la casa \emph{X} si trova a sinistra della casa \emph{Y} se $X < Y$, viceversa se la casa \emph{X} si trova a destra della casa \emph{Y}, allora $X > Y$.\\
+È presente anche un'altra regola, \emph{chi\_ha\_la\_zebra(Nazionalita)}, che ha la funzione di restituire la risposta cercata. La regola ha due goal:
+
+\begin{itemize}
+\item \emph{nazionalita(Casa, Nazionalita)}, che consente di connettere la nazionalità alla casa;
+\item \emph{animale(Casa, zebra)}, che permette di fare il passo finale, cioè legare la casa all'animale di nostro interesse;
+\end{itemize}
+
+\begin{lstlisting}[language=lisp]
+% Nazionalita'
+nazionalitas(inglese;spagnolo;giapponese;italiano;norvegese).
+
+% Casa
+case(1..5).
+
+% Funzione di adiacenza
+next_to(X, Y) :- case(X), case(Y), |X - Y| == 1.
+
+chi_ha_la_zebra(Nazionalita) :- nazionalita(Casa, Nazionalita), animale(Casa, zebra).
+\end{lstlisting}
+
+\section{Test}
+Questo modulo consiste in regole che eliminano gli \emph{answer sets} della parte \emph{generate} che non possono essere delle soluzioni.
+L'implementazione contiene tutti i vincoli che sono espressi dall'enunciato.
+Per esempio, il fatto $1$ è espresso dal vincolo riportato nel listato, dove si escludono dall'\emph{answer set} le soluzioni che hanno il personaggio inglese in una casa che non è rossa.
+Un discorso analogo può essere fatto per la regola $14$, dove invece si escludono dall'\emph{answer set} le soluzioni che prevedono che il cavallo non sia adiacente alla casa del diplomatico.
+
+\begin{lstlisting}[language=lisp]
+% 1. L'inglese vive nella casa rossa.
+:- nazionalita(X, inglese), colore(X, Y), Y != rossa.
+% 14. Il cavallo e' nella casa adiacente a quella del diplomatico
+:- animale(X, cavallo), professione(Y, diplomatico), not next_to(X, Y).
+\end{lstlisting}
+
+\section{Output}
+Questa parte finale non è propriamente definita dal \emph{design structure Generate-Define-Test}. 
+Ha lo scopo di restituire la soluzione trovata.
+La regola \emph{casa/6} realizza una sorta di tabella, che, attraverso l'istruzione \emph{\#show casa/6}, permette di essere stampata ed avere una visione di insieme su quello che si è ottenuto dall'esecuzione.
+L'istruzione \emph{\#show chi\_ha\_la\_zebra/1} resituisce la nazionalità del possessore di questo animale utilizzando la regola definita nella sezione \emph{define}.
+La soluzione restituita da Clingo dopo l'esecuzione di \emph{clingo 0 house\_problem.lp} è riportata nel listato.
+
+\begin{lstlisting}[language=lisp]
+chi_ha_la_zebra(giapponese)
+casa(1,gialla,norvegese,volpe,altro,diplomatico)
+casa(2,blu,italiano,cavallo,te,dottore)
+casa(3,rossa,inglese,lumache,latte,scultore)
+casa(4,bianca,spagnolo,cane,succo_di_frutta,violinista)
+casa(5,verde,giapponese,zebra,caffe,pittore)
+SATISFIABLE
+\end{lstlisting}
+
+\chapter{Trasporto aereo di merci}
+Questo capitolo prende in esame il problema del trasporto aereo di merci, tratto dal \emph{Russell e Norvig}, capitolo 10.1.
+La soluzione si trova all'interno del file \emph{plane\_problem.lp}.\\
+A differenza della precedente soluzione, questa segue una differente struttura, divindendosi in tre parti: la prima è introdotta dalla direttiva \emph{\#program base}, la seconda da \emph{\#program step(t)} e la terza da \emph{\#program check(t)}. \emph{Clingo}, infatti, consente la possibilità di dividere le regole di input in subprograms attraverso la direttiva \emph{\#program}.
+L'utilizzo di `\emph{t}` è di fondamentale importanza, infatti essa mantiene lo stato del programma, consentendo una esecuzione incrementale del problema. 
+Per poterne fare uso è necessario dichiarare la volontà di utilizzarlo e questo è possibile inserendo la libreria \emph{incmode} attraverso l'istruzione \emph{\#include <incmode>.}.
+
+\section{Sezione base}
+Questa sezione è una parte dedicata del \emph{subprogram} con una lista dei parametri vuota.
+Contiene essenzialmente una lista di fatti che definiscono il dominio del problema. Sono riportati infatti l'elenco degli oggetti presenti (cargo, plane e airport), lo stato iniziale e lo stato goal.
+È presente, inoltre, il caso base della regola di inerzia che permette di risolvere il problema. Si è deciso di utilizzare il predicato \emph{holds(F, 0)} che racchiude il fluente \emph{F}, che può essere sia `\emph{in}` che `\emph{at}`, così da avere una maggiore generalità, evitando di specificare le singole regole di inerzia per ciascuno.
+
+\section{Sezione step}
+Questa sezione è la più corposa e contiene al suo interno le regole che consentono di risolvere il problema descritto dal dominio.
+Per comodità si può dividere questa sezione in quattro parti.
+
+\paragraph*{Choice rules}
+La prima parte consiste in una singola \emph{choice rule} che consente di speficare che è possibile una sola azione ogni step.
+
+\begin{lstlisting}[language=lisp]
+1 { load(C, P, A, t): cargo(C), plane(P), airport(A); unload(C, P, A, t): cargo(C), plane(P), airport(A); fly(P, FROM, TO, t): plane(P), airport(FROM), airport(TO), FROM != TO} 1.
+\end{lstlisting}
+
+\paragraph*{Inerzia}
+La seconda parte contiene le regole di inerzia del predicato \emph{holds} in cui si specifica che il fluente non cambia il suo stato se non è esplicamente rimosso.
+La prima regola, per esempio, specifica che per avere il fluente \emph{F} nello stato \emph{t} del predicato \emph{holds}, si aveva il fluente nello stato \emph{t - 1} e che c'è assenza di informazione sulla negazione del predicato nello stato \emph{t}.
+
+\begin{lstlisting}[language=lisp]
+holds(F, t) :- holds(F, t - 1), not -holds(F, t).
+-holds(F, t) :- -holds(F, t - 1), not holds(F, t).
+\end{lstlisting}
+
+\paragraph*{Effetti}
+La terza parte contiene gli effetti delle azioni di \emph{load}, \emph{unload} e \emph{fly}.
+Nel listato sono riportati gli effetti che l'azione \emph{fly} comporta: volando dall'aereoporto \emph{FROM} all'aereoporto \emph{TO} nello stato \emph{t}, l'aereoplano \emph{P} si troverà nell'aereoporto \emph{TO} e non nell'aereoporto \emph{FROM} nello stato \emph{t}.
+
+\begin{lstlisting}[language=lisp]
+holds(at(P, TO), t) :- fly(P, FROM, TO, t).
+-holds(at(P, FROM), t) :- fly(P, FROM, TO, t).
+\end{lstlisting}
+
+\paragraph*{Vincoli}
+L'ultima parte contiene le precondioni sotto le quali le azioni sono possibili.
+Per esempio, nel listato riportato si esclude l'operazione di \emph{load} nello stato \emph{t} se avevo compiuto la stessa operazione sullo stesso cargo nello stato precedente \emph{t - 1}, qualsiasi sia l'aereoplano.
+
+\begin{lstlisting}[language=lisp]
+:- load(C, P, A, t), holds(in(C, _), t - 1).
+\end{lstlisting}
+
+\section{Check}
+Questa terza sezione verifica in ogni stato se si è raggiunto lo stato goal.
+
+\begin{lstlisting}[language=lisp]
+:- query(t), goal(F), not holds(F, t).
+\end{lstlisting}
+
+\section{Output}
+La soluzione proposta da \emph{Clingo} a questo problema è riportata nel listato. Quella inserita è la migliore che riesce a trovare sotto i vincoli espressi precedentemente. In totale \emph{Clingo} invidivuda $22$ differenti modelli di \emph{answer set}.
+
+\begin{lstlisting}[language=lisp]
+load(c1,p1,sfo,1)
+fly(p1,sfo,jfk,2)
+load(c2,p2,jfk,3)
+fly(p2,jfk,sfo,4)
+unload(c2,p2,sfo,5)
+unload(c1,p1,jfk,6)
+SATISFIABLE
+\end{lstlisting}
+
+\end{document}
