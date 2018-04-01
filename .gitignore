@@ -14,8 +14,8 @@ immagini/
 1.*Iterative_deepening/
 2.*IDAstar/
 3.*Astar/
-4.*Ampiezza*[NO]/
-"5.*Profondità*[NO]/
+4.*/
+5.*/
 Gioco*dell'8/
 Labirinto
 cammini12.pl
