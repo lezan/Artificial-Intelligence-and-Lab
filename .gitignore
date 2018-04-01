@@ -11,8 +11,8 @@
 *.toc
 *.tex
 immagini/
-"1. Iterative_deepening"/
-"2. IDAstar"/
+1.*Iterative_deepening/
+2.*IDAstar/
 "3. Astar"/
 "4. Ampiezza [NO]"/
 "5. Profondità [NO]"
